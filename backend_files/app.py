@@ -14,6 +14,7 @@ model = joblib.load(folder / "superkart_model.joblib")
 schema = json.loads((folder / "schema.json").read_text())
 
 def prepare_data(frame):
+    # Prepare the data: Check for schema validation
     missing = sorted(set(schema["features"]) - set(frame.columns))
     if missing:
         raise ValueError("Missing columns: " + ", ".join(missing))
@@ -29,11 +30,13 @@ def prepare_data(frame):
         raise ValueError("Product_Allocated_Area must be between 0 and 1.")
     for col, choices in schema["categories"].items():
         if not frame[col].isin(choices).all():
-            raise ValueError(col + " must be one of: " + ", ".join(choices))
+            # No need to stop the prediction just because training data didn't had new category
+            print(f"Unknown store type")
     return frame
 
 @superkart_api.get("/health")
 def health():
+    # Server health check API
     return jsonify({"status": "ok"})
 
 @superkart_api.post("/v1/predict")

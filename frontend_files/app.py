@@ -5,14 +5,17 @@ import pandas as pd
 import requests
 import streamlit as st
 
+# Input validation schema
 schema = json.loads((Path(__file__).resolve().parent / "schema.json").read_text())
-api_url = os.environ.get("BACKEND_URL", "http://127.0.0.1:7860").rstrip("/")
+
+api_url = os.environ.get("BACKEND_URL", "http://backend:7860").rstrip("/")
 st.set_page_config(page_title="SuperKart Sales Prediction", layout="centered")
 st.title("SuperKart Sales Prediction")
 st.write("Estimate sales revenue for a product at a store.")
-st.caption("Use store age as of 2025. Estimates reflect historical data and do not include seasonal changes.")
+st.caption("Use store age as of 2026. Estimates reflect historical data and do not include seasonal changes.")
 online, batch = st.tabs(["Single prediction", "Batch prediction"])
 
+## For single request
 with online:
     with st.form("sales_form"):
         payload = {}
@@ -35,6 +38,7 @@ with online:
         except (requests.RequestException, ValueError):
             st.error("Could not reach the prediction service. Check that the backend is running.")
 
+# For batch requests
 with batch:
     st.write("Upload a CSV with the same columns as Batch_Data_SuperKart.csv.")
     st.caption("Required columns: " + ", ".join(schema["features"]))
@@ -51,10 +55,6 @@ with batch:
                     from io import BytesIO
                     results = pd.read_csv(BytesIO(content))
                     predictions = response.json()
-                    unseen = [col for col, values in schema["categories"].items()
-                              if not results[col].isin(values).all()]
-                    if unseen:
-                        st.warning("Unseen categories in " + ", ".join(unseen) + ". Review these predictions carefully.")
                     results["Predicted_Sales"] = [predictions[str(i)] for i in range(len(results))]
                     st.dataframe(results)
                     st.download_button("Download predictions", results.to_csv(index=False),
@@ -62,4 +62,4 @@ with batch:
                 else:
                     st.error(response.json().get("error", "Prediction failed."))
             except (requests.RequestException, ValueError):
-                st.error("Could not process the file. Check the CSV and backend connection.")
+                st.error("Could not process the file. Check the CSV and backend connection")
